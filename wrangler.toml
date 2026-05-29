@@ -1,0 +1,38 @@
+# Cloudflare Pages Configuration
+name = "drivepro"
+type = "javascript"
+main = "index.html"
+
+# Build settings
+[build]
+command = "npm run build"
+cwd = "./"
+
+# Static files configuration
+[site]
+bucket = "./"
+
+# Redirect configuration
+[rules]
+fallthrough = true
+
+# Cache configuration
+[[rules]]
+type = "CompiledContentType"
+globs = ["**/*.wasm"]
+fallthrough = false
+
+# Security headers for production
+[env.production]
+routes = []
+
+[env.production.routes]
+pattern = "drivepro.pages.dev/*"
+zone_name = "pages.dev"
+
+[[observability.enabled_bindings]]
+service = "web_analytics"
+
+# Compatibility settings
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]

@@ -1,0 +1,5 @@
+# Redirect all routes to index.html for SPA
+/*  /index.html  200
+
+# Security redirects
+http://drivepro.pages.dev/*  https://drivepro.pages.dev/:splat  301!

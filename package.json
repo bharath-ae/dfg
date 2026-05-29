@@ -1,0 +1,15 @@
+{
+  "name": "drivepro",
+  "version": "1.0.0",
+  "description": "DrivePro - Driving School Management System",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev .",
+    "deploy": "wrangler pages deploy .",
+    "build": "echo 'Build complete - static site ready for deployment'"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "wrangler": "latest"
+  }
+}

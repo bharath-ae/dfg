@@ -1,0 +1,2277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DrivePro - Driving School Management System</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' font-weight='bold' fill='%23e8b84b'>D</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-functions-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-messaging-compat.js"></script>
+
+<!-- EmailJS for sending emails -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-analytics-compat.js"></script>
+<style>
+  :root {
+    --primary: #1a2744;
+    --accent: #e8b84b;
+    --accent2: #3b82f6;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --warning: #d97706;
+    --bg: #f5f7fb;
+    --surface: #ffffff;
+    --surface2: #f0f3fa;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text2: #64748b;
+    --text3: #94a3b8;
+    --shadow: 0 2px 12px rgba(26,39,68,0.08);
+    --shadow-lg: 0 8px 32px rgba(26,39,68,0.14);
+    --radius: 10px;
+    --radius-lg: 16px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+  h1,h2,h3,h4 { font-family: 'Syne', sans-serif; }
+
+  /* ---- SPLASH / LOGIN ---- */
+  #splash {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, #1a2744 0%, #0f172a 60%, #1e3a5f 100%);
+    position: relative; overflow: hidden;
+  }
+  #splash::before {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 60% 40%, rgba(232,184,75,0.12) 0%, transparent 70%);
+  }
+  .splash-card {
+    background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px; padding: 48px 40px; width: 420px; position: relative; z-index: 1;
+    backdrop-filter: blur(8px);
+  }
+  .splash-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 36px; }
+  .logo-icon {
+    width: 48px; height: 48px; background: var(--accent); border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .splash-logo h1 { color: white; font-size: 26px; letter-spacing: -0.5px; }
+  .splash-logo p { color: rgba(255,255,255,0.5); font-size: 12px; font-family: 'DM Sans'; margin-top: 2px; }
+  .role-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+  .role-btn {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 16px 8px; cursor: pointer; text-align: center;
+    transition: all 0.2s; color: white;
+  }
+  .role-btn:hover, .role-btn.active {
+    background: var(--accent); border-color: var(--accent); color: #1a2744;
+  }
+  .role-btn .ri { font-size: 24px; margin-bottom: 6px; display: block; }
+  .role-btn span { font-size: 11px; font-weight: 500; font-family: 'Syne'; display: block; }
+  .login-field { margin-bottom: 14px; }
+  .login-field label { color: rgba(255,255,255,0.6); font-size: 12px; margin-bottom: 6px; display: block; }
+  .login-field input {
+    width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px; padding: 11px 14px; color: white; font-size: 14px; font-family: 'DM Sans';
+    outline: none; transition: border-color 0.2s;
+  }
+  .login-field input:focus { border-color: var(--accent); }
+  .login-field input::placeholder { color: rgba(255,255,255,0.3); }
+  .btn-login {
+    width: 100%; background: var(--accent); border: none; border-radius: 8px;
+    padding: 13px; font-family: 'Syne'; font-size: 15px; font-weight: 600;
+    color: #1a2744; cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+  }
+  .btn-login:hover { opacity: 0.9; }
+  .demo-note { color: rgba(255,255,255,0.35); font-size: 11px; text-align: center; margin-top: 16px; }
+
+  /* ---- MAIN APP ---- */
+  #app { display: none; min-height: 100vh; }
+  .app-layout { display: flex; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 240px; background: var(--primary); min-height: 100vh;
+    display: flex; flex-direction: column; position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+  }
+  .sidebar-logo {
+    padding: 20px 20px 16px; border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .sidebar-logo .li { width: 34px; height: 34px; background: var(--accent); border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .sidebar-logo span { color: white; font-family: 'Syne'; font-size: 16px; font-weight: 700; }
+  .sidebar-role {
+    padding: 10px 20px 14px; font-size: 11px; color: rgba(255,255,255,0.4);
+    font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+  }
+  .sidebar-role strong { color: var(--accent); display: block; font-size: 13px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+  .sidebar-nav { flex: 1; padding: 0 10px; overflow-y: auto; }
+  .nav-section { margin-bottom: 20px; }
+  .nav-section-title { font-size: 10px; color: rgba(255,255,255,0.3); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; padding: 0 10px; margin-bottom: 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+    border-radius: 8px; cursor: pointer; color: rgba(255,255,255,0.55);
+    font-size: 13.5px; transition: all 0.15s; margin-bottom: 2px;
+  }
+  .nav-item:hover { background: rgba(255,255,255,0.06); color: white; }
+  .nav-item.active { background: rgba(232,184,75,0.15); color: var(--accent); }
+  .nav-item .ni { width: 18px; text-align: center; font-size: 15px; }
+  .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .logout-btn {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    color: rgba(255,255,255,0.4); font-size: 13px; transition: color 0.2s;
+    background: none; border: none; padding: 0;
+  }
+  .logout-btn:hover { color: #f87171; }
+
+  /* Main content */
+  .main-content { margin-left: 240px; flex: 1; padding: 28px; min-height: 100vh; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .page-header { margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; }
+  .page-header h2 { font-size: 22px; color: var(--text); letter-spacing: -0.3px; }
+  .page-header p { color: var(--text2); font-size: 13px; margin-top: 3px; }
+
+  /* Cards & Grids */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 14px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
+    border: 1px solid var(--border); box-shadow: var(--shadow);
+  }
+  .stat-card .sc-label { font-size: 11.5px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat-card .sc-value { font-size: 28px; font-family: 'Syne'; font-weight: 700; margin: 6px 0 4px; }
+  .stat-card .sc-sub { font-size: 12px; color: var(--text2); }
+  .stat-card.accent { border-left: 3px solid var(--accent); }
+  .stat-card.blue { border-left: 3px solid var(--accent2); }
+  .stat-card.green { border-left: 3px solid var(--success); }
+  .stat-card.red { border-left: 3px solid var(--danger); }
+
+  .card {
+    background: var(--surface); border-radius: var(--radius-lg); padding: 22px 24px;
+    border: 1px solid var(--border); box-shadow: var(--shadow); margin-bottom: 18px;
+  }
+  .card-title {
+    font-family: 'Syne'; font-size: 15px; font-weight: 600; color: var(--text);
+    margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;
+  }
+
+  /* Table */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    text-align: left; padding: 10px 12px; background: var(--surface2);
+    color: var(--text2); font-weight: 600; font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+  }
+  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green { background: #dcfce7; color: #15803d; }
+  .badge-blue { background: #dbeafe; color: #1d4ed8; }
+  .badge-amber { background: #fef3c7; color: #b45309; }
+  .badge-red { background: #fee2e2; color: #b91c1c; }
+  .badge-gray { background: #f1f5f9; color: #475569; }
+  .badge-purple { background: #ede9fe; color: #6d28d9; }
+
+  /* Forms */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .form-group { margin-bottom: 0; }
+  .form-group.full { grid-column: 1 / -1; }
+  .form-group label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-family: 'DM Sans'; font-size: 13.5px; color: var(--text);
+    background: white; outline: none; transition: border-color 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent2); }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px;
+    border-radius: 8px; font-family: 'DM Sans'; font-size: 13.5px; font-weight: 500;
+    cursor: pointer; border: none; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: #243459; }
+  .btn-accent { background: var(--accent); color: #1a2744; font-weight: 600; }
+  .btn-accent:hover { background: #d4a43d; }
+  .btn-success { background: var(--success); color: white; }
+  .btn-danger { background: var(--danger); color: white; }
+  .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-outline:hover { background: var(--surface2); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+
+  /* Attendance */
+  .att-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(140px,1fr)); gap: 12px; }
+  .att-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 14px; text-align: center; cursor: pointer; transition: all 0.2s;
+  }
+  .att-card:hover { border-color: var(--accent2); box-shadow: var(--shadow); }
+  .att-card.present { border-color: var(--success); background: #f0fdf4; }
+  .att-card.absent { border-color: var(--danger); background: #fef2f2; }
+  .att-avatar {
+    width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 600; font-family: 'Syne';
+  }
+  .att-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .att-status { font-size: 11px; margin-top: 4px; font-weight: 600; }
+
+  /* Cashflow */
+  .cf-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  .cf-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 14px; margin-bottom: 20px; }
+  .cf-box { border-radius: var(--radius); padding: 18px 20px; }
+  .cf-income { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .cf-expense { background: #fef2f2; border: 1px solid #fecaca; }
+  .cf-profit { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .cf-box .cfl { font-size: 12px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; }
+  .cf-box .cfv { font-size: 26px; font-family: 'Syne'; font-weight: 700; margin-top: 6px; }
+  .cf-income .cfv { color: var(--success); }
+  .cf-expense .cfv { color: var(--danger); }
+  .cf-profit .cfv { color: var(--accent2); }
+
+  /* Chart bar */
+  .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 160px; margin-top: 12px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar { width: 100%; border-radius: 4px 4px 0 0; transition: height 0.4s ease; min-height: 4px; }
+  .bar-income { background: linear-gradient(to top, #16a34a, #4ade80); }
+  .bar-expense { background: linear-gradient(to top, #dc2626, #f87171); }
+  .bar-label { font-size: 10px; color: var(--text2); text-align: center; }
+
+  /* Notification badge */
+  .notif { position: relative; }
+  .notif-dot { position: absolute; top: -3px; right: -3px; width: 8px; height: 8px; background: var(--danger); border-radius: 50%; }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.55);
+    z-index: 1000; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: white; border-radius: 18px; padding: 28px 30px;
+    width: 520px; max-width: 95vw; max-height: 90vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .modal-header h3 { font-family: 'Syne'; font-size: 18px; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text2); padding: 4px; }
+  .modal-close:hover { color: var(--danger); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--surface2); padding: 4px; border-radius: 10px; margin-bottom: 20px; width: fit-content; }
+  .tab { padding: 8px 18px; border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text2); transition: all 0.15s; }
+  .tab.active { background: white; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+
+  /* Schedule */
+  .schedule-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+  .schedule-day { background: var(--surface2); border-radius: 8px; padding: 10px 6px; }
+  .schedule-day-name { font-size: 11px; font-weight: 600; color: var(--text2); text-align: center; text-transform: uppercase; margin-bottom: 8px; }
+  .schedule-slot { background: white; border-radius: 6px; padding: 6px 7px; margin-bottom: 5px; font-size: 11px; border-left: 3px solid var(--accent2); }
+  .schedule-slot .ss-time { color: var(--text2); font-size: 10px; }
+  .schedule-slot .ss-name { font-weight: 500; color: var(--text); }
+
+  /* GPS / Attendance photo */
+  .gps-box {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    border: 1px solid #bfdbfe; border-radius: var(--radius-lg);
+    padding: 24px; text-align: center; margin-bottom: 18px;
+  }
+  .gps-icon { font-size: 40px; margin-bottom: 10px; }
+  .gps-status { font-size: 14px; font-weight: 500; color: var(--accent2); }
+  .photo-upload-area {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 30px; text-align: center; cursor: pointer; transition: all 0.2s;
+    background: var(--surface2);
+  }
+  .photo-upload-area:hover { border-color: var(--accent2); background: #eff6ff; }
+
+  /* DL Test schedule */
+  .dl-card {
+    background: linear-gradient(135deg, var(--primary), #243459);
+    color: white; border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 12px;
+  }
+  .dl-card h4 { font-family: 'Syne'; font-size: 15px; margin-bottom: 8px; color: var(--accent); }
+  .dl-row { display: flex; justify-content: space-between; font-size: 13px; margin-top: 6px; }
+  .dl-row span:first-child { color: rgba(255,255,255,0.6); }
+  .dl-row span:last-child { font-weight: 500; }
+
+  /* Report */
+  .report-section { background: var(--surface); border-radius: var(--radius-lg); border: 1px solid var(--border); overflow: hidden; }
+  .report-header { background: var(--primary); color: white; padding: 20px 24px; }
+  .report-header h3 { font-family: 'Syne'; font-size: 18px; margin-bottom: 4px; }
+  .report-header p { font-size: 12px; color: rgba(255,255,255,0.6); }
+  .report-body { padding: 24px; }
+  .report-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .report-row:last-child { border-bottom: none; }
+  .report-total { display: flex; justify-content: space-between; padding: 14px 0 0; font-size: 16px; font-weight: 700; font-family: 'Syne'; }
+
+  /* Student progress */
+  .progress-bar { background: var(--surface2); border-radius: 20px; height: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 20px; transition: width 0.5s; }
+
+  /* Fuel bar */
+  .fuel-bar-wrap { background: var(--surface2); border-radius: 20px; height: 10px; overflow: hidden; }
+  .fuel-fill { height: 100%; border-radius: 20px; transition: width 0.5s; display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; }
+  .fuel-fill span { font-size: 9px; color: white; font-weight: 700; }
+
+  /* Driver fuel card */
+  .driver-fuel-card { background: var(--surface2); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 14px; border: 1px solid var(--border); }
+  .driver-fuel-card:hover { border-color: var(--accent2); background: #eff6ff; }
+
+  /* Responsive helpers */
+  .flex { display: flex; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .gap-10 { gap: 10px; }
+  .gap-12 { gap: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mt-20 { margin-top: 20px; }
+  .mb-16 { margin-bottom: 16px; }
+  .text-center { text-align: center; }
+  .text-success { color: var(--success); }
+  .text-danger { color: var(--danger); }
+  .text-muted { color: var(--text2); }
+
+  /* Alert */
+  .alert { padding: 12px 16px; border-radius: 8px; font-size: 13px; margin-bottom: 16px; }
+  .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+  .alert-success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+  .alert-warning { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+
+  /* Print */
+  @media print {
+    .sidebar, .page-header button, .btn { display: none !important; }
+    .main-content { margin-left: 0 !important; }
+  }
+
+  /* Scrollbasssssssr */
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+  .avatar {
+    width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; font-family: 'Syne'; font-size: 13px; font-weight: 600; flex-shrink: 0;
+  }
+  .chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 20px; font-size: 11.5px; font-weight: 500; }
+
+  /* Petrol section */
+  .fuel-meter { position: relative; height: 120px; display: flex; align-items: center; justify-content: center; }
+  .fuel-bar-wrap { width: 100%; height: 24px; background: var(--surface2); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .fuel-fill { height: 100%; border-radius: 12px; background: linear-gradient(to right, #f97316, #fbbf24); transition: width 0.5s; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; }
+  .fuel-fill span { font-size: 11px; font-weight: 600; color: white; }
+
+  /* Tab Buttons */
+  .tab-btn {
+    padding: 8px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .tab-btn:hover {
+    background: var(--surface2);
+    border-color: var(--primary);
+    color: var(--text);
+  }
+  .tab-btn.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  
+  /* Attendance Sections */
+  .attendance-section {
+    animation: fadeIn 0.3s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Badge colors */
+  .badge-blue { background: var(--primary); }
+  .badge-green { background: var(--success); }
+  .badge-orange { background: #f97316; }
+  .badge-purple { background: #8b5cf6; }
+</style>
+</head>
+<body>
+
+<!-- SPLASH / LOGIN -->
+<div id="splash">
+  <div class="splash-card">
+    <div class="splash-logo">
+      <div class="logo-icon">🚗</div>
+      <div>
+        <h1>DrivePro</h1>
+        <p>Driving School Management System</p>
+      </div>
+    </div>
+    <div class="splash-content">
+      <div class="splash-logo">
+        <div class="li">🚗</div>
+        <h1>DriveSchool Pro</h1>
+        <p>Multi-Tenant Driving School Management</p>
+      </div>
+      
+      <!-- School Selection/Creation (hidden until login) -->
+      <div id="school-section" style="display: none;">
+        <div class="login-field">
+          <label>School</label>
+          <select id="school-select" onchange="onSchoolChange()" style="width: 100%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 11px 14px; color: white; font-size: 14px; font-family: 'DM Sans';">
+            <option value="">Select your school...</option>
+          </select>
+        </div>
+      </div>
+      
+      <!-- Login Form -->
+      <div id="login-form">
+        <div class="role-grid">
+          <div class="role-btn active" onclick="selectRole('owner')" id="role-owner">
+            <span class="ri">👑</span><span>Owner</span>
+          </div>
+          <div class="role-btn" onclick="selectRole('office')" id="role-office">
+            <span class="ri">🏢</span><span>Office</span>
+          </div>
+          <div class="role-btn" onclick="selectRole('instructor')" id="role-instructor">
+            <span class="ri">👨‍🏫</span><span>Instructor</span>
+          </div>
+        </div>
+        <div class="login-field">
+          <label>Email</label>
+          <input type="email" id="login-user" placeholder="Enter your email" value="">
+        </div>
+        <div class="login-field">
+          <label>Password</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="login-pass" placeholder="Enter your password" value="" style="padding-right: 40px; width: 100%;">
+            <button type="button" onclick="toggleLoginPasswordVisibility()" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+              <span id="login-password-icon">👁</span>
+            </button>
+          </div>
+        </div>
+        <div style="text-align: right; margin-bottom: 15px;">
+          <a href="#" onclick="openPasswordResetModal()" style="color: var(--accent); font-size: 13px; text-decoration: none;">Forgot Password?</a>
+        </div>
+        <button class="btn-login" onclick="doLogin()">Sign In →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- School Creation with Manager Modal -->
+<div class="modal-overlay" id="modal-create-school-with-manager" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+  <div class="modal-content" style="max-width:550px; width: 90%; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header" style="padding: 20px 20px 0 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; color: var(--text); font-size: 18px; font-weight: 600;">Create New School</h3>
+      <button class="modal-close" onclick="closeCreateSchoolWithManagerModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text2); padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">×</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <!-- School Details Section -->
+      <div style="margin-bottom:25px;">
+        <h4 style="margin:0 0 15px 0;color:var(--primary);font-size:16px;">School Details</h4>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">School Name</label>
+          <input type="text" id="new-school-name" placeholder="Enter school name" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Address</label>
+          <textarea id="new-school-address" placeholder="Enter school address" class="form-control" rows="3" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px;resize:vertical; box-sizing: border-box;"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Phone</label>
+          <input type="tel" id="new-school-phone" placeholder="Enter school phone" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">School Location</label>
+          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+            <input type="number" id="school-latitude" placeholder="Latitude" class="form-control" step="any" style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+            <input type="number" id="school-longitude" placeholder="Longitude" class="form-control" step="any" style="flex: 1; padding: 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; box-sizing: border-box;">
+          </div>
+          <button type="button" onclick="getSchoolLocation()" class="btn btn-secondary" style="padding: 8px 16px; font-size: 13px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 6px; cursor: pointer;">
+            📍 Get Current Location
+          </button>
+          <div id="location-status" style="margin-top: 8px; font-size: 12px; color: var(--text2);"></div>
+        </div>
+      </div>
+      
+      <!-- Admin Login Section -->
+      <div style="margin-bottom:20px;">
+        <h4 style="margin:0 0 15px 0;color:var(--primary);font-size:16px;">Admin Login Details</h4>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Admin Name</label>
+          <input type="text" id="cs-admin-name" placeholder="Enter admin name" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Admin Email</label>
+          <input type="email" id="cs-admin-email" placeholder="Enter admin email address" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Initial Password</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="cs-admin-password" placeholder="Set initial admin password" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box; padding-right: 40px;">
+            <button type="button" onclick="togglePasswordVisibility('admin-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+              <span id="admin-password-icon">👁</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Confirm Password</label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="cs-admin-confirm-password" placeholder="Confirm admin password" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box; padding-right: 40px;">
+            <button type="button" onclick="togglePasswordVisibility('admin-confirm-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+              <span id="admin-confirm-password-icon">👁</span>
+            </button>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Role</label>
+          <select id="cs-admin-role" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+            <option value="office">Office Admin</option>
+            <option value="instructor">Instructor</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-bottom:15px;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Phone Number</label>
+          <input type="tel" id="cs-admin-phone" placeholder="Enter admin phone number" class="form-control" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label style="display:block;margin-bottom:5px;font-weight:500;color:var(--text);">Permissions</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <input type="checkbox" id="perm-students" checked style="margin: 0;">
+              <div>
+                <div style="font-weight: 600; color: #374151; font-size: 13px;">👥 Students</div>
+                <div style="font-size: 11px; color: #6b7280;">Add, edit, delete students</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <input type="checkbox" id="perm-transactions" checked style="margin: 0;">
+              <div>
+                <div style="font-weight: 600; color: #374151; font-size: 13px;">💰 Transactions</div>
+                <div style="font-size: 11px; color: #6b7280;">Manage income & expenses</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <input type="checkbox" id="perm-attendance" checked style="margin: 0;">
+              <div>
+                <div style="font-weight: 600; color: #374151; font-size: 13px;">✅ Attendance</div>
+                <div style="font-size: 11px; color: #6b7280;">Mark student attendance</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+              <input type="checkbox" id="perm-reports" checked style="margin: 0;">
+              <div>
+                <div style="font-weight: 600; color: #374151; font-size: 13px;">📊 Reports</div>
+                <div style="font-size: 11px; color: #6b7280;">View reports & analytics</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Note Section -->
+      <div style="background:#f8f9fa;padding:15px;border-radius:8px;border-left:4px solid var(--accent);margin-bottom:20px;">
+        <p style="margin:0;color:var(--text2);font-size:13px;line-height:1.4;">
+          <strong>Note:</strong> The admin credentials will be used to login and manage the school.
+        </p>
+      </div>
+    </div>
+    <div class="modal-footer" style="padding:20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeCreateSchoolWithAdminModal()" style="padding:12px 20px;border:1px solid var(--border);background:var(--background);color:var(--text);border-radius:6px;cursor:pointer; font-size: 14px;">Cancel</button>
+      <button class="btn btn-accent" onclick="createSchoolWithAdmin()" style="padding:12px 20px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer; font-size: 14px;">Create School</button>
+    </div>
+  </div>
+</div>
+
+<!-- Admin Invite Success Modal -->
+<div class="modal-overlay" id="modal-admin-invite-success" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+  <div class="modal-content" style="max-width:500px; width: 90%; background: white; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-height: 90vh; overflow-y: auto;">
+    <div class="modal-header" style="padding: 20px 20px 0 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; color: var(--success); font-size: 18px; font-weight: 600;">School Created Successfully!</h3>
+      <button class="modal-close" onclick="closeAdminInviteSuccessModal()" style="background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text2); padding: 0; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%;">×</button>
+    </div>
+    <div class="modal-body" style="padding: 20px;">
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:48px;color:var(--success);margin-bottom:15px;">&#10004;</div>
+        <p style="margin:0 0 10px 0;font-weight:500;font-size:16px;">School has been created successfully!</p>
+        <p style="margin:0;color:var(--text2);font-size:14px;">Here are your admin login details:</p>
+      </div>
+      
+      <div style="background:#f8f9fa;padding:20px;border-radius:8px;border:1px solid var(--border);margin:20px 0;">
+        <h4 style="margin:0 0 15px 0;color:var(--primary);text-align:center;font-size:16px;">Admin Login Details</h4>
+        <div style="display:grid;gap:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><strong>Email:</strong> <span id="admin-login-email" style="color:var(--accent);font-weight:500;"></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><strong>Password:</strong> <span id="admin-login-password" style="color:var(--accent);font-weight:600;"></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #eee;"><strong>School:</strong> <span id="admin-school-name" style="color:var(--text);"></span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;"><strong>Login URL:</strong> <span style="color:var(--text2);font-size:12px;">http://127.0.0.1:5500</span></div>
+        </div>
+      </div>
+      
+      <div style="background:#fff3cd;padding:15px;border-radius:8px;border-left:4px solid #ffc107;margin-top:15px;">
+        <p style="margin:0;color:#856404;font-size:13px;line-height:1.4;">
+          <strong>Important:</strong> Save these credentials securely. You can login using this email and password.
+        </p>
+      </div>
+    </div>
+    
+      <div class="modal-footer" style="padding:20px;border-top:1px solid var(--border);display:flex;justify-content:center;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeCreateSchoolWithAdminModal()" style="padding:12px 20px;border:1px solid var(--border);background:var(--background);color:var(--text);border-radius:6px;cursor:pointer; font-size: 14px;">Cancel</button>
+      <button class="btn btn-accent" onclick="copyAdminDetails()" style="padding:12px 20px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer; font-size: 14px;">Copy Details</button>
+      <button class="btn btn-accent" onclick="closeAdminInviteSuccessModal()" style="padding:12px 20px;background:var(--accent);color:white;border:none;border-radius:6px;cursor:pointer; font-size: 14px;">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-logo">
+        <div class="li">🚗</div>
+        <span>DrivePro</span>
+      </div>
+      <div class="sidebar-role">
+        Role<strong id="sidebar-role-name">Owner Panel</strong>
+      </div>
+      <!-- School Quick Switcher (owner only) -->
+      <div id="owner-school-switcher" style="display:none;align-items:center;padding:8px 16px;border-bottom:1px solid rgba(255,255,255,0.08);gap:6px;"></div>
+      <nav class="sidebar-nav" id="sidebar-nav"></nav>
+      <div class="sidebar-footer">
+        <button class="logout-btn" onclick="doLogout()">
+          <span>⬅</span> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="main-content" id="main-content">
+      <!-- OWNER PAGES -->
+      <!-- Overall View Pages -->
+      <div class="page active" id="page-overall-dashboard">
+        <div class="page-header">
+          <div><h2>All Schools Overview</h2><p>Combined view across all your driving schools</p></div>
+          <div class="flex gap-10">
+            <span id="overall-date" style="color:var(--text2);font-size:13px;padding:8px 14px;background:white;border:1px solid var(--border);border-radius:8px;"></span>
+          </div>
+        </div>
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="sc-label">Total Schools</div><div class="sc-value" style="color:var(--primary)" id="total-schools">0</div><div class="sc-sub">Active schools</div></div>
+          <div class="stat-card blue"><div class="sc-label">Total Students</div><div class="sc-value" style="color:var(--accent2)" id="total-students-all">0</div><div class="sc-sub">Across all schools</div></div>
+          <div class="stat-card green"><div class="sc-label">Total Revenue</div><div class="sc-value" style="color:var(--success)" id="total-revenue">₹0</div><div class="sc-sub">This month</div></div>
+          <div class="stat-card red"><div class="sc-label">Total Expenses</div><div class="sc-value" style="color:var(--danger)" id="total-expenses">₹0</div><div class="sc-sub">This month</div></div>
+          <div class="stat-card"><div class="sc-label">Total Instructors</div><div class="sc-value" id="total-instructors">0</div><div class="sc-sub">Across all schools</div></div>
+          <div class="stat-card"><div class="sc-label">Total Classes</div><div class="sc-value" id="total-classes">0</div><div class="sc-sub">Scheduled today</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Schools Performance</div>
+          <div id="schools-performance"></div>
+        </div>
+      </div>
+      
+      <!-- Overall Students Page -->
+      <div class="page" id="page-overall-students">
+        <!-- Content will be populated by renderOverallStudents -->
+      </div>
+      
+      <!-- Overall Cashflow Page -->
+      <div class="page" id="page-overall-cashflow">
+        <!-- Content will be populated by renderOverallCashflow -->
+      </div>
+      
+      <!-- Overall Reports Page -->
+      <div class="page" id="page-overall-reports">
+        <!-- Content will be populated by renderOverallReports -->
+      </div>
+      
+      <!-- School Selector Page -->
+      <div class="page" id="page-school-selector">
+        <div class="page-header">
+          <div><h2>Select School</h2><p>Choose a school to view detailed data</p></div>
+          <div class="flex gap-10">
+            <span id="selector-date" style="color:var(--text2);font-size:13px;padding:8px 14px;background:white;border:1px solid var(--border);border-radius:8px;"></span>
+            <button class="btn btn-accent" data-action="create_school" onclick="openCreateSchoolWithManagerModal()">+ Create New School</button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <div class="card-title">Choose School to View</div>
+          <div id="schools-grid" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(300px, 1fr));gap:20px;">
+            <!-- Schools will be populated here -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="page" id="page-dashboard">
+        <div class="page-header">
+          <div>
+            <h2>Dashboard Overview</h2>
+            <p>Today's summary across all operations</p>
+          </div>
+          <div class="flex gap-10">
+            <button class="btn btn-secondary" onclick="switchToOverallView()" style="padding:8px 14px; font-size:13px;">Back to Overall</button>
+            <span id="dash-date" style="color:var(--text2);font-size:13px;padding:8px 14px;background:white;border:1px solid var(--border);border-radius:8px;"></span>
+          </div>
+        </div>
+        
+        <!-- School Selector (shown in dashboard) -->
+        <div id="dashboard-school-selector" style="display:none; margin-bottom:20px;">
+          <div class="card" style="background:var(--accent); color:white; border:none;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <div>
+                <div style="font-weight:600; margin-bottom:4px;">Select School to Manage</div>
+                <div style="font-size:14px; opacity:0.9;">Choose which school data to view and manage</div>
+              </div>
+              <select id="dashboard-school-select" onchange="selectDashboardSchool()" style="background:rgba(255,255,255,0.2); border:1px solid rgba(255,255,255,0.3); color:white; padding:8px 12px; border-radius:6px; font-size:14px;">
+                <option value="">Select school...</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+                <div class="stats-grid" id="dashboard-stats-grid">
+          <div class="stat-card accent"><div class="sc-label">Total Students</div><div class="sc-value" style="color:var(--primary)">0</div><div class="sc-sub">Total enrolled</div></div>
+          <div class="stat-card blue"><div class="sc-label">Active Learners</div><div class="sc-value" style="color:var(--accent2)">0</div><div class="sc-sub">Currently learning</div></div>
+          <div class="stat-card green"><div class="sc-label">Today's Income</div><div class="sc-value" style="color:var(--success)">₹0</div><div class="sc-sub">Fees collected</div></div>
+          <div class="stat-card red"><div class="sc-label">Today's Expense</div><div class="sc-value" style="color:var(--danger)">₹0</div><div class="sc-sub">Operational costs</div></div>
+          <div class="stat-card"><div class="sc-label">DL Tests Scheduled</div><div class="sc-value">0</div><div class="sc-sub">Upcoming tests</div></div>
+          <div class="stat-card"><div class="sc-label">Instructors</div><div class="sc-value">0</div><div class="sc-sub">Total instructors</div></div>
+        </div>
+        <!-- Income Analytics Row -->
+        <div id="income-analytics-section" style="margin-bottom:18px;">
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-title">📈 Income Analytics
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-outline btn-sm" onclick="switchIncomeView('daily',this)" id="income-btn-daily">Daily</button>
+                <button class="btn btn-primary btn-sm" onclick="switchIncomeView('weekly',this)" id="income-btn-weekly">Weekly</button>
+                <button class="btn btn-outline btn-sm" onclick="switchIncomeView('monthly',this)" id="income-btn-monthly">Monthly</button>
+                <button class="btn btn-outline btn-sm" onclick="switchIncomeView('yearly',this)" id="income-btn-yearly">Yearly</button>
+              </div>
+            </div>
+            <div id="income-analytics-content">
+              <div style="text-align:center;padding:20px;color:var(--text2);">Loading analytics...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Monthly Cash Flow
+              <div class="tabs" style="margin:0">
+                <div class="tab active" onclick="switchCFChart('month',this)">Month</div>
+                <div class="tab" onclick="switchCFChart('year',this)">Year</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:12px;margin-bottom:12px;">
+              <span class="chip" style="background:#dcfce7;color:#15803d;">● Income</span>
+              <span class="chip" style="background:#fee2e2;color:#b91c1c;">● Expense</span>
+            </div>
+            <canvas class="bar-chart" id="dash-chart" width="400" height="180"></canvas>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent Transactions</div>
+            <table class="data-table">
+              <thead><tr><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+              <tbody id="recent-tx"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Today's Attendance <span class="badge badge-blue" id="att-count">Loading...</span>
+              <span id="att-today-date" style="font-size:12px;color:var(--text2);font-weight:normal;"></span>
+            </div>
+            <div class="stats-grid" style="margin-bottom:16px;">
+              <div class="stat-card"><div class="sc-label">Present Today</div><div class="sc-value" id="quick-att-today">0</div><div class="sc-sub">Students</div></div>
+              <div class="stat-card"><div class="sc-label">Attendance Rate</div><div class="sc-value" id="quick-att-rate">0%</div><div class="sc-sub">Today</div></div>
+              <div class="stat-card"><div class="sc-label">Weekly Avg</div><div class="sc-value" id="quick-att-week">0</div><div class="sc-sub">This week</div></div>
+              <div class="stat-card"><div class="sc-label">Monthly Avg</div><div class="sc-value" id="quick-att-month">0</div><div class="sc-sub">This month</div></div>
+            </div>
+            <div id="dash-attendance"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Upcoming DL Tests</div>
+            <div id="dash-dl-tests"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-all-students">
+        <div class="page-header">
+          <div><h2>All Students</h2><p>Complete student database</p></div>
+          <button class="btn btn-accent" data-action="add_student" onclick="openAddStudentModal()">+ Add Student</button>
+        </div>
+        <div class="card" style="padding:0;overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center;">
+            <input type="text" placeholder="🔍  Search students..." style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:13px;" oninput="filterStudents(this.value)">
+            <select style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:13px;" onchange="filterStudents(document.querySelector('input[placeholder*=Search]').value, this.value)">
+              <option value="">All Status</option>
+              <option value="Active">Active</option>
+              <option value="Completed">Completed</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Phone</th><th>Vehicle</th><th>Instructor</th><th>Classes</th><th>Status</th><th>Action</th></tr></thead>
+            <tbody id="students-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page" id="page-cashflow">
+        <div class="page-header">
+          <div><h2>Daily Cash Flow</h2><p>Income & expenditure management</p></div>
+          <button class="btn btn-accent" data-action="add_transaction" onclick="openModal('modal-add-tx')">+ Add Entry</button>
+        </div>
+        <div class="cf-summary" id="cf-summary"></div>
+        <div class="card">
+          <div class="card-title">Transactions
+            <div style="display:flex;gap:8px;">
+              <input type="month" id="cf-month-filter" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:12px;" onchange="renderCashflow()">
+              <button class="btn btn-outline btn-sm" onclick="printReport()">🖨 Report</button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Category</th><th>Description</th><th>Type</th><th>Amount</th></tr></thead>
+            <tbody id="cf-table"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page" id="page-reports">
+        <div class="page-header">
+          <div><h2>Reports</h2><p>Monthly & yearly financial reports</p></div>
+          <div class="flex gap-10">
+            <select id="report-period" style="padding:8px 14px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:13px;" onchange="renderReport()">
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+            <button class="btn btn-primary" onclick="printReport()">🖨 Print</button>
+          </div>
+        </div>
+        <div id="report-content"></div>
+      </div>
+
+      <!-- OFFICE PAGES -->
+      <div class="page" id="page-add-student">
+        <div class="page-header">
+          <div><h2>Student Enrollment</h2><p>Register new student</p></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Student Details</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Full Name *</label><input type="text" id="s-name" placeholder="Enter full name"></div>
+            <div class="form-group"><label>Date of Birth *</label><input type="date" id="s-dob"></div>
+            <div class="form-group"><label>Phone Number *</label><input type="tel" id="s-phone" placeholder="10-digit number"></div>
+            <div class="form-group"><label>Email</label><input type="email" id="s-email" placeholder="email@example.com"></div>
+            <div class="form-group full"><label>FCM Token (optional)</label><textarea id="s-fcm-token" placeholder="Paste student FCM token here"></textarea></div>
+            <div class="form-group full"><label>Address</label><textarea id="s-address" placeholder="Full address"></textarea></div>
+            <div class="form-group"><label>Aadhaar Number</label><input type="text" id="s-aadhaar" placeholder="XXXX XXXX XXXX"></div>
+            <div class="form-group"><label>Vehicle Type *</label>
+              <select id="s-vehicle">
+                <option>2-Wheeler (Gear)</option>
+                <option>2-Wheeler (Gearless)</option>
+                <option>4-Wheeler (LMV)</option>
+                <option>Both 2W + 4W</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Assign Instructor</label>
+              <select id="s-instructor"><option value="">Select Instructor</option></select>
+            </div>
+            <div class="form-group"><label>Total Classes</label><input type="number" id="s-total-classes" placeholder="e.g. 27" value="27" min="1"></div>
+            <div class="form-group"><label>Fee Amount (₹)</label><input type="number" id="s-fee" placeholder="Total fee"></div>
+            <div class="form-group"><label>Fee Paid (₹)</label><input type="number" id="s-paid" placeholder="Amount paid"></div>
+            <div class="form-group"><label>Enrollment Date</label><input type="date" id="s-enroll"></div>
+            <div class="form-group"><label>Emergency Contact</label><input type="tel" id="s-emergency" placeholder="Emergency phone"></div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-accent" onclick="enrollStudent()">✓ Enroll Student</button>
+            <button class="btn btn-outline" onclick="clearEnrollForm()">Clear</button>
+          </div>
+          <div id="enroll-msg" style="margin-top:12px;"></div>
+        </div>
+      </div>
+
+      
+      <div class="page" id="page-dl-schedule">
+        <div class="page-header">
+          <div><h2>DL Test Schedule</h2><p>Schedule & notify students for driving licence test</p></div>
+          <button class="btn btn-accent" onclick="openScheduleDLModal()">+ Schedule Test</button>
+        </div>
+        <div class="alert alert-info">📋 Students who complete minimum 22 classes are eligible for DL test scheduling. Notifications are sent automatically.</div>
+        <div class="two-col">
+          <div>
+            <div class="card-title" style="margin-bottom:14px;font-family:'Syne';font-size:15px;font-weight:600;">Upcoming Tests</div>
+            <div id="dl-tests-list"></div>
+          </div>
+          <div>
+            <div class="card-title" style="margin-bottom:14px;font-family:'Syne';font-size:15px;font-weight:600;">Eligible Students (Ready)</div>
+            <div id="dl-eligible-list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="page" id="page-notifications">
+        <div class="page-header">
+          <div><h2>Notifications</h2><p>System alerts & student notifications</p></div>
+          <button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all read</button>
+        </div>
+        <div id="notif-list"></div>
+      </div>
+
+      <!-- INSTRUCTOR PAGES -->
+      <!-- ============================================================ -->
+      <!-- PAGE 1: MY ATTENDANCE (Self-marking) — UPDATED               -->
+      <!-- ============================================================ -->
+      <div class="page active" id="page-attendance">
+        <div class="page-header">
+          <div>
+            <h2>✅ My Attendance</h2>
+            <p id="att-date-display">Today — Tuesday, 13 May 2025</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span class="new-badge">Updated</span>
+            <button class="btn btn-accent" onclick="openSelfAttModal()" id="mark-self-btn">📍 Mark My Attendance</button>
+          </div>
+        </div>
+
+        <!-- Self Attendance Status Banner -->
+        <div class="self-att-banner" id="self-att-banner">
+          <div style="font-size:48px;">👨‍🏫</div>
+          <div class="self-att-status">
+            <h3 id="self-att-msg">Mark Your Attendance to Begin</h3>
+            <p id="self-att-sub">You haven't marked attendance for today yet. Click the button to mark yourself present.</p>
+          </div>
+          <div id="self-att-time-block" style="text-align:right;display:none;">
+            <div style="font-size:11px;opacity:0.6;margin-bottom:4px;">Marked at</div>
+            <div id="self-att-time" style="font-family:'Syne';font-size:22px;font-weight:700;color:var(--accent);">—</div>
+          </div>
+        </div>
+
+        <!-- Step Flow (shows next steps after marking self) -->
+        <div class="card" id="next-steps-card" style="display:none;">
+          <div class="card-title">📋 Today's Workflow <span class="new-badge">New</span></div>
+          <div class="step-flow" id="step-flow">
+            <div class="step-item">
+              <div class="step-circle done" id="step1">✓</div>
+              <span class="step-label">Mark My Attendance</span>
+            </div>
+            <div class="step-connector done"></div>
+            <div class="step-item">
+              <div class="step-circle active" id="step2">2</div>
+              <span class="step-label">View Schedule</span>
+            </div>
+            <div class="step-connector" id="conn2"></div>
+            <div class="step-item">
+              <div class="step-circle" id="step3">3</div>
+              <span class="step-label">Mark Students</span>
+            </div>
+            <div class="step-connector" id="conn3"></div>
+            <div class="step-item">
+              <div class="step-circle" id="step4">4</div>
+              <span class="step-label">Log Fuel</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-primary" onclick="showPage('page-class-schedule');completeStep(2);">📅 View Today's Schedule</button>
+            <button class="btn btn-success" onclick="showPage('page-student-attendance');completeStep(3);">👥 Mark Student Attendance</button>
+            <button class="btn btn-outline" onclick="showPage('page-petrol')">⛽ Log Fuel</button>
+          </div>
+        </div>
+
+        <!-- Attendance History -->
+        <div class="card">
+          <div class="card-title">📊 My Attendance History (This Month)</div>
+          <div class="stats-grid" style="margin-bottom:0;">
+            <div class="stat-card accent"><div class="sc-label">Days Present</div><div class="sc-value" style="color:var(--primary)" id="stat-days-present">—</div><div class="sc-sub">This month</div></div>
+            <div class="stat-card red"><div class="sc-label">Days Absent</div><div class="sc-value" style="color:var(--danger)" id="stat-days-absent">—</div><div class="sc-sub">This month</div></div>
+            <div class="stat-card green"><div class="sc-label">Attendance Rate</div><div class="sc-value" style="color:var(--success)" id="stat-att-rate">—</div><div class="sc-sub">This month</div></div>
+            <div class="stat-card blue"><div class="sc-label">On Time</div><div class="sc-value" style="color:var(--accent2)" id="stat-on-time">—</div><div class="sc-sub">Punctual days</div></div>
+          </div>
+          <div style="margin-top:18px;">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Check-In</th><th>Status</th><th>Location</th><th>Note</th></tr></thead>
+              <tbody id="att-history-body">
+                <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text2);">No attendance records yet. Mark your attendance to begin.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- PAGE 2: CLASS SCHEDULE — UPDATED (with reschedule reason)    -->
+      <!-- ============================================================ -->
+      <div class="page" id="page-class-schedule">
+        <div class="page-header">
+          <div>
+            <h2>📅 Today's Class Schedule</h2>
+            <p id="schedule-date-display">Loading schedule...</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span class="new-badge">Updated</span>
+            <button class="btn btn-outline btn-sm" onclick="showPage('page-student-attendance');completeStep(3);">👥 Mark Students →</button>
+          </div>
+        </div>
+
+        <div class="alert-info">📋 After reviewing your schedule, proceed to <strong>Student Attendance</strong> to mark each student. For rescheduled classes, a reason is required.</div>
+
+        <!-- Schedule List -->
+        <div class="card">
+          <div class="card-title">Today's Classes <span class="badge badge-gray" id="schedule-count-badge">0 Total</span></div>
+          <div class="schedule-list" id="schedule-list">
+            <div style="text-align:center;padding:40px;color:var(--text2);">
+              <div style="font-size:32px;margin-bottom:10px;">📅</div>
+              <div>No classes scheduled for today.</div>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align:right;">
+          <button class="btn btn-success" onclick="showPage('page-student-attendance');completeStep(3);">👥 Proceed to Mark Student Attendance →</button>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- PAGE 3: STUDENT ATTENDANCE — NEW                             -->
+      <!-- ============================================================ -->
+      <div class="page" id="page-student-attendance">
+        <div class="page-header">
+          <div>
+            <h2>👥 Student Attendance</h2>
+            <p id="student-att-date-display">Mark attendance for your students</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span class="new-badge">New</span>
+            <button class="btn btn-accent" onclick="saveStudentAttendance()" id="save-att-btn">💾 Save Attendance</button>
+          </div>
+        </div>
+
+        <div class="alert-info">✅ Mark attendance for each student from today's scheduled classes. Click a card to toggle between <strong>Present / Absent / Late</strong>. Save when done.</div>
+
+        <!-- Summary bar -->
+        <div class="stats-grid">
+          <div class="stat-card green"><div class="sc-label">Present</div><div class="sc-value" style="color:var(--success)" id="att-present-count">0</div><div class="sc-sub">Marked</div></div>
+          <div class="stat-card red"><div class="sc-label">Absent</div><div class="sc-value" style="color:var(--danger)" id="att-absent-count">0</div><div class="sc-sub">Marked</div></div>
+          <div class="stat-card accent"><div class="sc-label">Late</div><div class="sc-value" style="color:var(--warning)" id="att-late-count">0</div><div class="sc-sub">Marked</div></div>
+          <div class="stat-card"><div class="sc-label">Not Marked</div><div class="sc-value" id="att-pending-count">0</div><div class="sc-sub">Pending</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Today's Students <span class="badge badge-gray" id="student-att-count-badge">0 Students</span></div>
+          <p style="font-size:12px;color:var(--text2);margin-bottom:16px;">Click card once = <span class="badge badge-green">Present</span> &nbsp; Twice = <span class="badge badge-amber">Late</span> &nbsp; Three times = <span class="badge badge-red">Absent</span> &nbsp; Four times = reset</p>
+          <div class="att-grid" id="student-att-grid">
+            <div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--text2);">
+              <div style="font-size:32px;margin-bottom:10px;">👥</div>
+              <div>No students scheduled for today.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Previous attendance log -->
+        <div class="card">
+          <div class="card-title">📋 Recent Attendance Log</div>
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Student</th><th>Status</th><th>Class #</th><th>Notes</th></tr></thead>
+            <tbody id="student-att-log-body">
+              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--text2);">No attendance records yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- PAGE 4: PETROL LOG — UPDATED (odometer before/after, money+litres) -->
+      <!-- ============================================================ -->
+      <div class="page" id="page-petrol">
+        <div class="page-header">
+          <div>
+            <h2>⛽ My Fuel Log</h2>
+            <p>Record fuel fills for your assigned vehicle</p>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;">
+            <span class="new-badge">Updated</span>
+            <button class="btn btn-accent" onclick="openFuelModal()">+ Log Fuel Fill</button>
+          </div>
+        </div>
+
+        <!-- Vehicle banner -->
+        <div style="background:linear-gradient(135deg,var(--primary),#243459);color:white;border-radius:var(--radius-lg);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;">
+          <div style="font-size:40px;">🚗</div>
+          <div>
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px;">Your Assigned Vehicle</div>
+            <div id="fuel-vehicle-name" style="font-family:'Syne';font-size:18px;font-weight:700;">No vehicle assigned</div>
+            <div id="fuel-vehicle-reg" style="font-size:13px;color:rgba(255,255,255,0.65);margin-top:2px;">Contact office to get a vehicle assigned</div>
+          </div>
+          <div style="margin-left:auto;text-align:right;">
+            <div style="font-size:11px;color:rgba(255,255,255,0.5);margin-bottom:4px;">This Month Fuel Cost</div>
+            <div id="fuel-month-cost" style="font-family:'Syne';font-size:24px;font-weight:700;color:var(--accent);">₹0</div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="sc-label">My Fuel (This Month)</div><div class="sc-value" style="color:var(--primary)" id="fuel-stat-cost">₹0</div><div class="sc-sub">Total spent</div></div>
+          <div class="stat-card"><div class="sc-label">Total Fills</div><div class="sc-value" id="fuel-stat-fills">0</div><div class="sc-sub">Entries logged</div></div>
+          <div class="stat-card blue"><div class="sc-label">Total Litres</div><div class="sc-value" style="color:var(--accent2)" id="fuel-stat-litres">0L</div><div class="sc-sub">Refueled this month</div></div>
+          <div class="stat-card green"><div class="sc-label">Distance Covered</div><div class="sc-value" style="color:var(--success)" id="fuel-stat-km">0</div><div class="sc-sub">km this month</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">My Fuel History <span class="new-badge">Odometer Tracking Added</span></div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Vehicle</th>
+                <th>Odo Before (km)</th>
+                <th>Odo After (km)</th>
+                <th>Litres (L)</th>
+                <th>Amount (₹)</th>
+                <th>₹/Litre</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="fuel-history-tbody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2);">No fuel entries yet. Click "+ Log Fuel Fill" to add one.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- STAFF MANAGEMENT PAGE -->
+      <div class="page" id="page-staff-management">
+        <div class="page-header">
+          <div><h2>Staff Management</h2><p>Manage school staff members and instructors</p></div>
+          <div class="flex gap-10">
+            <button class="btn btn-outline btn-sm" onclick="repairStaffLoginAccess()" title="Fix login for staff who cannot sign in">🔧 Fix Login Access</button>
+            <button class="btn btn-danger" onclick="clearAllStaffFromFirebase()">Clear All Staff</button>
+            <button class="btn btn-accent" data-action="add_staff" onclick="openStaffModal()">+ Add Staff</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">School Staff Members</div>
+          <div id="staff-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                  <th>Joined On</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="staff-table">
+                <!-- Staff will be populated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADMIN MANAGEMENT PAGE -->
+      <div class="page" id="page-admin-management">
+        <div class="page-header">
+          <div><h2>Admin Management</h2><p>Manage school administrators</p></div>
+          <div class="flex gap-10">
+            <button class="btn btn-danger" onclick="clearAllAdminsFromFirebase()">Clear All Admins</button>
+            <button class="btn btn-outline" onclick="repairAdminLoginAccess()">Fix Admin Login</button>
+            <button class="btn btn-accent" data-action="add_admin" onclick="openModal('modal-add-admin')">+ Add Admin</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">School Administrators</div>
+          <div id="admins-table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Phone</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="admins-table">
+                <!-- Admins will be populated here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODAL: SELF ATTENDANCE                                        -->
+      <!-- ============================================================ -->
+      <div class="modal-overlay" id="modal-self-att">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>📍 Mark My Attendance</h3>
+            <button class="modal-close" onclick="closeModal('modal-self-att')">✕</button>
+          </div>
+          <div class="alert-success">✅ Your attendance will be logged with today's date and time.</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="self-att-date" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-group">
+              <label>Status *</label>
+              <select id="self-att-status">
+                <option value="present">✅ Present</option>
+                <option value="late">⏰ Late</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>Check-In Time *</label>
+              <input type="time" id="self-att-check-in" value="08:45">
+            </div>
+            <div class="form-group full">
+              <label>Location / Note (optional)</label>
+              <input type="text" id="self-att-location" placeholder="e.g. DrivePro HQ, Koramangala">
+            </div>
+          </div>
+
+          <div style="margin-top:20px;padding:14px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);text-align:center;">
+            <div style="font-size:20px;margin-bottom:6px;">🌐</div>
+            <div style="font-size:13px;font-weight:500;">Auto-detecting Location...</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:4px;">DrivePro HQ, Koramangala, Bengaluru</div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-success" onclick="markSelfPresent()" style="flex:1;">✅ Confirm Attendance</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-self-att')">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODAL: RESCHEDULE CLASS — NEW (requires reason)             -->
+      <!-- ============================================================ -->
+      <div class="modal-overlay" id="modal-reschedule">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>⚠ Reschedule Class</h3>
+            <button class="modal-close" onclick="closeModal('modal-reschedule')">✕</button>
+          </div>
+          <div class="alert-warning">⚠ Rescheduling requires a valid reason. The owner and student will be notified.</div>
+          <div style="background:var(--surface2);border-radius:10px;padding:14px 16px;margin-bottom:18px;border:1px solid var(--border);">
+            <div style="font-size:12px;color:var(--text2);">Class for</div>
+            <div style="font-size:16px;font-weight:600;color:var(--text);margin-top:4px;" id="reschedule-student-name">—</div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Original Date</label>
+              <input type="date" id="reschedule-orig-date" value="2025-05-13" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-group">
+              <label>New Date *</label>
+              <input type="date" id="reschedule-new-date" value="2025-05-14">
+            </div>
+            <div class="form-group">
+              <label>Original Time</label>
+              <input type="time" id="reschedule-orig-time" value="13:00" readonly style="background:#f8fafc;">
+            </div>
+            <div class="form-group">
+              <label>New Time *</label>
+              <input type="time" id="reschedule-new-time" value="14:00">
+            </div>
+            <div class="form-group full">
+              <label>Reason for Reschedule * <span style="color:var(--danger);">(Required)</span></label>
+              <select id="reschedule-reason-type" onchange="toggleReasonField()" style="margin-bottom:8px;">
+                <option value="">— Select a reason —</option>
+                <option value="student-request">Student requested reschedule</option>
+                <option value="instructor-sick">Instructor sick / unwell</option>
+                <option value="vehicle-breakdown">Vehicle breakdown</option>
+                <option value="weather">Bad weather / safety concern</option>
+                <option value="ground-unavailable">Training ground unavailable</option>
+                <option value="emergency">Personal emergency</option>
+                <option value="other">Other (specify below)</option>
+              </select>
+              <textarea id="reschedule-reason-detail" placeholder="Provide additional details about the reschedule reason..." style="min-height:80px;" required></textarea>
+            </div>
+            <div class="form-group full">
+              <label>Notify Student? </label>
+              <select id="reschedule-notify">
+                <option value="yes">Yes — Send SMS/Notification to student</option>
+                <option value="no">No — I will inform the student directly</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-warning" onclick="saveReschedule()" style="flex:1;">⚠ Confirm Reschedule</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-reschedule')">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODAL: FUEL LOG — UPDATED (odo before, litres, money)       -->
+      <!-- ============================================================ -->
+      <div class="modal-overlay" id="modal-fuel">
+        <div class="modal" style="width:600px;">
+          <div class="modal-header">
+            <h3>⛽ Log Fuel Fill</h3>
+            <button class="modal-close" onclick="closeModal('modal-fuel')">✕</button>
+          </div>
+          <div class="alert-info">ℹ️ This fuel log is <strong>visible to the school owner</strong>. Please fill all fields accurately. Odometer reading before AND after refueling is required.</div>
+
+          <!-- Odometer section -->
+          <div style="background:var(--surface2);border-radius:12px;padding:16px;margin-bottom:18px;border:1px solid var(--border);">
+            <div style="font-family:'Syne';font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">🔢 Odometer Reading</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label>Before Refueling (km) * <span style="color:var(--danger);">Required</span></label>
+                <input type="number" id="fuel-odo-before" placeholder="e.g. 24,500" min="0" oninput="calcDistance()">
+                <div style="font-size:11px;color:var(--text2);margin-top:4px;">Enter the odometer reading BEFORE you refuel</div>
+              </div>
+              <div class="form-group">
+                <label>After Refueling (km)</label>
+                <input type="number" id="fuel-odo-after" placeholder="Optional — after refueling" min="0" oninput="calcDistance()">
+                <div style="font-size:11px;color:var(--text2);margin-top:4px;">Can be entered after you refuel</div>
+              </div>
+            </div>
+            <div id="odo-distance-display" style="display:none;margin-top:8px;background:white;border-radius:8px;padding:10px 14px;border:1px solid var(--border);font-size:13px;color:var(--text2);">
+              📏 Distance since last fill: <strong id="odo-distance-val" style="color:var(--primary);">— km</strong>
+            </div>
+          </div>
+
+          <!-- Fuel details -->
+          <div style="font-family:'Syne';font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;">⛽ Fuel Details</div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Date *</label>
+              <input type="date" id="fuel-date-new">
+            </div>
+            <div class="form-group">
+              <label>Vehicle *</label>
+              <select id="fuel-vehicle-new">
+                <option value="">Select your vehicle...</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Litres Filled (L) * <span style="color:var(--danger);">Required</span></label>
+              <input type="number" id="fuel-litres-new" placeholder="e.g. 20" step="0.5" min="0" oninput="calcPPL()">
+            </div>
+            <div class="form-group">
+              <label>Total Amount Paid (₹) * <span style="color:var(--danger);">Required</span></label>
+              <input type="number" id="fuel-cost-new" placeholder="e.g. 2,040" min="0" oninput="calcPPL()">
+            </div>
+            <div class="form-group">
+              <label>Price per Litre (₹/L)</label>
+              <input type="number" id="fuel-ppl-new" placeholder="Auto calculated" readonly style="background:#f8fafc;color:var(--success);font-weight:600;">
+              <div style="font-size:11px;color:var(--text2);margin-top:4px;">Auto calculated from litres + amount</div>
+            </div>
+            <div class="form-group">
+              <label>Fuel Type</label>
+              <select id="fuel-type-new">
+                <option value="petrol">Petrol</option>
+                <option value="diesel">Diesel</option>
+                <option value="cng">CNG</option>
+              </select>
+            </div>
+            <div class="form-group full">
+              <label>Notes (optional)</label>
+              <input type="text" id="fuel-notes-new" placeholder="e.g. Full tank at HP Petrol Pump, Koramangala">
+            </div>
+          </div>
+
+          <!-- Live summary -->
+          <div id="fuel-summary-box" style="display:none;margin-top:14px;background:var(--surface2);border-radius:10px;padding:14px 16px;border:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.05em;">📋 Submission Summary</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+              <div>Odo Before: <strong id="sum-odo-before">—</strong></div>
+              <div>Litres: <strong id="sum-litres">—</strong></div>
+              <div>Amount: <strong id="sum-amount" style="color:var(--danger);">—</strong></div>
+              <div>₹/L Rate: <strong id="sum-ppl">—</strong></div>
+            </div>
+          </div>
+
+          <div style="margin-top:20px;display:flex;gap:10px;">
+            <button class="btn btn-accent" onclick="submitFuelLog()" style="flex:1;">💾 Submit Fuel Log</button>
+            <button class="btn btn-outline" onclick="closeModal('modal-fuel')">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Toast -->
+      <div id="toast" style="display:none;position:fixed;bottom:28px;right:28px;background:var(--success);color:white;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:500;box-shadow:var(--shadow-lg);z-index:9999;animation:slideUp 0.3s ease;">
+        <span id="toast-msg">Done!</span>
+      </div>
+
+      
+
+      <!-- OWNER FUEL DASHBOARD PAGE -->
+      <div class="page" id="page-owner-fuel">
+        <div class="page-header">
+          <div><h2>⛽ Fuel Dashboard</h2><p>All driver fuel updates & vehicle fuel tracking</p></div>
+          <div class="flex gap-10">
+            <input type="month" id="owner-fuel-month-filter" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:12px;" onchange="renderOwnerFuelDashboard()">
+            <button class="btn btn-outline btn-sm" onclick="renderOwnerFuelDashboard()">🔄 Refresh</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="sc-label">Total Fuel Cost</div><div class="sc-value" style="color:var(--primary)" id="owner-fuel-total">₹0</div><div class="sc-sub">This month</div></div>
+          <div class="stat-card blue"><div class="sc-label">Total Litres</div><div class="sc-value" style="color:var(--accent2)" id="owner-fuel-litres">0L</div><div class="sc-sub">Consumed</div></div>
+          <div class="stat-card green"><div class="sc-label">Driver Submissions</div><div class="sc-value" style="color:var(--success)" id="owner-fuel-entries">0</div><div class="sc-sub">Fuel logs received</div></div>
+          <div class="stat-card"><div class="sc-label">Vehicles Tracked</div><div class="sc-value" id="owner-fuel-vehicles">0</div><div class="sc-sub">Active this month</div></div>
+        </div>
+
+        <div class="two-col">
+          <!-- Fuel Levels by Vehicle -->
+          <div class="card">
+            <div class="card-title">⛽ Fuel Levels by Vehicle</div>
+            <div id="owner-fuel-levels">
+              <div style="text-align:center;padding:30px;color:var(--text2);">Loading vehicle fuel levels...</div>
+            </div>
+          </div>
+
+          <!-- Per-Driver Summary -->
+          <div class="card">
+            <div class="card-title">👤 Fuel by Driver (This Month)</div>
+            <div id="owner-fuel-by-driver">
+              <div style="text-align:center;padding:30px;color:var(--text2);">No driver fuel data yet</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Full Driver Fuel Log Table -->
+        <div class="card">
+          <div class="card-title">📋 All Driver Fuel Submissions
+            <div style="display:flex;gap:8px;">
+              <select id="owner-fuel-driver-filter" onchange="renderOwnerFuelDashboard()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:12px;">
+                <option value="">All Drivers</option>
+              </select>
+              <select id="owner-fuel-vehicle-filter" onchange="renderOwnerFuelDashboard()" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans';font-size:12px;">
+                <option value="">All Vehicles</option>
+              </select>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Driver / Instructor</th>
+                <th>Vehicle</th>
+                <th>Litres</th>
+                <th>Cost (₹)</th>
+                <th>KM Reading</th>
+                <th>Notes</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="owner-fuel-table">
+              <tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text2);">No fuel entries found. Drivers must submit fuel updates from their panel.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page" id="page-vehicles">
+        <div class="page-header">
+          <div><h2>Vehicle Fleet</h2><p>Vehicles from all your driving schools</p></div>
+          <div class="flex gap-10">
+            <select id="vehicle-school-filter" onchange="filterVehiclesBySchool()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: white;">
+              <option value="">All Schools</option>
+            </select>
+            <button class="btn btn-accent" onclick="openAddVehicleModal()">+ Add Vehicle</button>
+            <button class="btn btn-outline" onclick="refreshVehicles()">🔄 Refresh</button>
+          </div>
+        </div>
+        
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="sc-label">Total Vehicles</div><div class="sc-value" style="color:var(--primary)" id="total-vehicles">0</div><div class="sc-sub">All schools</div></div>
+          <div class="stat-card blue"><div class="sc-label">Active Vehicles</div><div class="sc-value" style="color:var(--accent2)" id="active-vehicles">0</div><div class="sc-sub">Currently in use</div></div>
+          <div class="stat-card green"><div class="sc-label">Maintenance Due</div><div class="sc-value" style="color:var(--success)" id="maintenance-due">0</div><div class="sc-sub">Service required</div></div>
+          <div class="stat-card"><div class="sc-label">Schools with Vehicles</div><div class="sc-value" id="schools-with-vehicles">0</div><div class="sc-sub">Active locations</div></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Vehicle Inventory</div>
+          <div id="vehicles-container">
+            <div style="text-align: center; padding: 40px; color: var(--text2);">
+              <div style="font-size: 48px; margin-bottom: 16px;">🚗</div>
+              <div>Loading vehicle data...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OWNER ATTENDANCE PAGE -->
+      <!-- OFFICE SELF-ATTENDANCE PAGE -->
+      <div class="page" id="page-office-attendance">
+        <div class="page-header">
+          <div><h2>✅ My Attendance</h2><p id="office-att-date">Today</p></div>
+          <button class="btn btn-accent" onclick="openOfficeAttModal()" id="office-mark-btn">📍 Mark My Attendance</button>
+        </div>
+        <div class="self-att-banner" id="office-att-banner" style="cursor:default;">
+          <div style="font-size:48px;">👤</div>
+          <div class="self-att-status">
+            <h3 id="office-att-msg">Mark Your Attendance to Begin</h3>
+            <p id="office-att-sub">You haven't marked attendance for today yet.</p>
+          </div>
+          <div id="office-att-time-block" style="text-align:right;display:none;">
+            <div style="font-size:11px;opacity:0.6;margin-bottom:4px;">Marked at</div>
+            <div id="office-att-time" style="font-family:'Syne';font-size:22px;font-weight:700;color:var(--accent);">—</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📊 My Attendance History (This Month)</div>
+          <div class="stats-grid" style="margin-bottom:16px;">
+            <div class="stat-card green"><div class="sc-label">Present</div><div class="sc-value" style="color:var(--success)" id="office-stat-present">—</div></div>
+            <div class="stat-card red"><div class="sc-label">Absent</div><div class="sc-value" style="color:var(--danger)" id="office-stat-absent">—</div></div>
+            <div class="stat-card accent"><div class="sc-label">Rate</div><div class="sc-value" style="color:var(--primary)" id="office-stat-rate">—</div></div>
+            <div class="stat-card blue"><div class="sc-label">On Time</div><div class="sc-value" style="color:var(--accent2)" id="office-stat-ontime">—</div></div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>Check-In</th><th>Status</th><th>Note</th></tr></thead>
+            <tbody id="office-att-history"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="page" id="page-owner-attendance">
+        <div class="page-header">
+          <div><h2>Attendance Management</h2><p>Manage attendance for all schools and user types</p></div>
+          <div style="display: flex; gap: 10px;">
+            <select id="owner-attendance-school-filter" onchange="renderOwnerAttendance()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: white;">
+              <option value="">All Schools</option>
+            </select>
+            <select id="owner-attendance-date-filter" onchange="renderOwnerAttendance()" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: white;">
+              <option value="">Today</option>
+            </select>
+            <button class="btn btn-accent" onclick="refreshOwnerAttendance()">🔄 Refresh</button>
+          </div>
+        </div>
+        
+        <!-- Attendance Overview Stats -->
+        <div class="stats-grid">
+          <div class="stat-card accent"><div class="sc-label">Total Present</div><div class="sc-value" style="color:var(--primary)" id="owner-total-present">0</div><div class="sc-sub">Staff & Instructors</div></div>
+          <div class="stat-card blue"><div class="sc-label">Total Absent</div><div class="sc-value" style="color:var(--accent2)" id="owner-total-absent">0</div><div class="sc-sub">Staff & Instructors</div></div>
+          <div class="stat-card green"><div class="sc-label">Instructors Present</div><div class="sc-value" style="color:var(--success)" id="owner-students-present">0</div><div class="sc-sub">Today</div></div>
+          <div class="stat-card"><div class="sc-label">Staff Present</div><div class="sc-value" id="owner-staff-present">0</div><div class="sc-sub">Today</div></div>
+        </div>
+
+        <!-- Attendance by User Type -->
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">👨‍🏫 Instructors</div>
+            <div id="owner-instructors-attendance"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">👥 Staff</div>
+            <div id="owner-staff-attendance"></div>
+          </div>
+        </div>
+
+        <!-- Detailed Attendance Table -->
+        <div class="card">
+          <div class="card-title">Detailed Attendance Records</div>
+          <div style="margin-bottom: 16px; display: flex; gap: 10px; align-items: center;">
+            <label style="font-size: 13px; color: var(--text2);">Show:</label>
+            <select id="owner-attendance-type-filter" onchange="renderOwnerAttendance()" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px;">
+              <option value="all">All Staff</option>
+              <option value="instructors">Instructors Only</option>
+              <option value="staff">Staff Only</option>
+              <option value="admins" style="display: none;">Admins Only</option>
+            </select>
+          </div>
+          <div style="overflow-x: auto;">
+            <table class="data-table" id="owner-attendance-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Type</th>
+                  <th>School</th>
+                  <th>Status</th>
+                  <th>Time</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="owner-attendance-tbody">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 40px; color: var(--text2);">
+                    <div style="font-size: 24px; margin-bottom: 8px;">📊</div>
+                    Loading attendance data...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- OTHER SERVICES PAGE -->
+      <div class="page" id="page-other-services">
+        <!-- Populated by renderOtherServices() -->
+      </div>
+
+      <!-- STUDENT TRACKING PAGE -->
+      <div class="page" id="page-student-tracking">
+        <!-- Populated by renderStudentTracking() -->
+      </div>
+
+      <!-- INSTRUCTOR STUDENTS LIST PAGE -->
+      <div class="page" id="page-my-students">
+        <div class="page-header">
+          <div><h2>👨‍🎓 My Students</h2><p>Students assigned to you</p></div>
+          <button class="btn btn-outline btn-sm" onclick="renderInstructorStudents()">🔄 Refresh</button>
+        </div>
+        <div id="instructor-students-list">
+          <div style="text-align:center;padding:40px;color:var(--text2);">Loading students...</div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- MODALS -->
+<!-- Password Reset Modal -->
+<div class="modal-overlay" id="modal-password-reset" style="display: none;">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Reset Password</h3>
+      <button class="modal-close" onclick="closePasswordResetModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 20px;">
+        <p style="color: var(--text2); line-height: 1.5;">Enter your email address and we'll send you a password reset link.</p>
+      </div>
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="reset-email" placeholder="Enter your email" class="form-control">
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-secondary" onclick="closePasswordResetModal()" style="flex: 1;">Cancel</button>
+        <button class="btn btn-accent" onclick="sendPasswordReset()" style="flex: 1;">Send Reset Link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-student">
+  <div class="modal" style="width:640px;max-width:96vw;">
+    <div class="modal-header">
+      <h3>📋 Enroll New Student</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-student')">✕</button>
+    </div>
+    <!-- Tabs for sections -->
+    <div class="tabs" style="margin-bottom:18px;">
+      <div class="tab active" onclick="switchStudentTab('personal',this)">Personal Info</div>
+      <div class="tab" onclick="switchStudentTab('course',this)">Course & Fee</div>
+    </div>
+    <!-- Personal Info Tab -->
+    <div id="stab-personal">
+      <div class="form-grid">
+        <div class="form-group"><label>Full Name *</label><input type="text" id="qs-name" placeholder="Student full name"></div>
+        <div class="form-group"><label>Student ID</label><input type="text" id="qs-student-id" placeholder="Optional student ID"></div>
+        <div class="form-group"><label>Date of Birth *</label><input type="date" id="qs-dob"></div>
+        <div class="form-group"><label>Phone Number *</label><input type="tel" id="qs-phone" placeholder="10-digit mobile"></div>
+        <div class="form-group"><label>Email Address</label><input type="email" id="qs-email" placeholder="student@email.com"></div>
+        <div class="form-group full"><label>FCM Token (optional)</label><textarea id="qs-fcm-token" style="min-height:70px;" placeholder="Paste student FCM token here"></textarea></div>
+        <div class="form-group full"><label>Address</label><textarea id="qs-address" style="min-height:60px;" placeholder="Full residential address"></textarea></div>
+        <div class="form-group"><label>Aadhaar Number</label><input type="text" id="qs-aadhaar" placeholder="XXXX XXXX XXXX" maxlength="14"></div>
+        <div class="form-group"><label>Emergency Contact</label><input type="tel" id="qs-emergency" placeholder="Emergency phone"></div>
+        <div class="form-group"><label>Blood Group</label>
+          <select id="qs-blood"><option value="">Select</option><option>A+</option><option>A-</option><option>B+</option><option>B-</option><option>AB+</option><option>AB-</option><option>O+</option><option>O-</option></select>
+        </div>
+        <div class="form-group"><label>Gender</label>
+          <select id="qs-gender"><option value="">Select</option><option>Male</option><option>Female</option><option>Other</option></select>
+        </div>
+        <div class="form-group"><label>Enrollment Date</label><input type="date" id="qs-enrolled"></div>
+      </div>
+    </div>
+    <!-- Course Tab -->
+    <div id="stab-course" style="display:none;">
+      <div class="form-grid">
+        <div class="form-group"><label>Vehicle Type *</label>
+          <select id="qs-vehicle"><option>2-Wheeler (Gear)</option><option>2-Wheeler (Gearless)</option><option>4-Wheeler (LMV)</option><option>Both 2W + 4W</option></select>
+        </div>
+        <div class="form-group"><label>Assign Instructor (optional)</label>
+          <select id="qs-instructor"><option value="">-- Select Instructor --</option></select>
+        </div>
+        <div class="form-group"><label>Class Time (optional)</label>
+          <input type="time" id="qs-class-time" placeholder="e.g. 10:30">
+        </div>
+        <div class="form-group"><label>Total Classes</label><input type="number" id="qs-total-classes" placeholder="e.g. 27" value="27" min="1"></div>
+        <!-- Schedule during enrollment -->
+        <div class="form-group full" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;margin-top:4px;">
+          <div style="font-weight:600;font-size:13px;color:var(--primary);margin-bottom:10px;">📅 Class Schedule (optional — set up now)</div>
+          <div class="form-grid">
+            <div class="form-group"><label>Preferred Days</label>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;" id="qs-days-wrap">
+                ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;"><input type="checkbox" value="${d}" class="qs-day-check"> ${d}</label>`).join('')}
+              </div>
+            </div>
+            <div class="form-group"><label>Schedule Start Date</label>
+              <input type="date" id="qs-schedule-start">
+            </div>
+            <div class="form-group"><label>Duration per Session</label>
+              <select id="qs-session-duration">
+                <option value="30">30 minutes</option>
+                <option value="45">45 minutes</option>
+                <option value="60" selected>1 hour</option>
+                <option value="90">1.5 hours</option>
+                <option value="120">2 hours</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-group"><label>Total Fee (₹)</label><input type="number" id="qs-fee" placeholder="e.g. 5000"></div>
+        <div class="form-group"><label>Amount Paid (₹)</label><input type="number" id="qs-paid" placeholder="e.g. 2500"></div>
+        <div class="form-group"><label>Payment Mode</label>
+          <select id="qs-paymode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select>
+        </div>
+        <div class="form-group"><label>Status</label>
+          <select id="qs-status"><option>Active</option><option>Pending</option><option>Completed</option></select>
+        </div>
+        <div class="form-group full"><label>Course Notes</label><textarea id="qs-notes" style="min-height:60px;" placeholder="Any special instructions or notes..."></textarea></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+      <button class="btn btn-accent" data-action="add_student" onclick="addStudentFromModal()" style="flex:1;">✓ Enroll Student</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-student')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-tx">
+  <div class="modal" style="width:580px;max-width:95vw;">
+    <div class="modal-header"><h3>💰 Add Cash Entry</h3><button class="modal-close" onclick="closeModal('modal-add-tx')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="tx-date"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="tx-type"><option value="income">Income</option><option value="expense">Expense</option></select>
+      </div>
+      <div class="form-group"><label>Category</label>
+        <select id="tx-cat">
+          <option>Student Fee</option><option>Other Service Fee</option>
+          <option>Petrol</option><option>Vehicle Maintenance</option>
+          <option>Vehicle Insurance</option><option>Vehicle Registration</option>
+          <option>Salary</option><option>Office Expense</option><option>Miscellaneous</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Amount (₹)</label><input type="number" id="tx-amount" placeholder="0"></div>
+      <div class="form-group"><label>Vehicle (if applicable)</label>
+        <select id="tx-vehicle"><option value="">-- Not vehicle related --</option></select>
+      </div>
+      <div class="form-group"><label>Payment Mode</label>
+        <select id="tx-paymode"><option>Cash</option><option>UPI</option><option>Bank Transfer</option><option>Cheque</option></select>
+      </div>
+      <div class="form-group full"><label>Description</label><input type="text" id="tx-desc" placeholder="Details of the transaction"></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" data-permission="add_transaction" onclick="addTransaction()">Add Entry</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-tx')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- LL Schedule Modal -->
+<div class="modal-overlay" id="modal-ll-schedule">
+  <div class="modal" style="width:580px;max-width:95vw;">
+    <div class="modal-header"><h3>📋 LL Test Schedule</h3><button class="modal-close" onclick="closeModal('modal-ll-schedule')">✕</button></div>
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#92400e;">
+      ⚠️ Students must complete at least 7 classes before LL test scheduling.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Select Student *</label>
+        <select id="ll-student" style="width:100%"><option value="">-- Select Student --</option></select>
+      </div>
+      <div class="form-group"><label>Test Date *</label><input type="date" id="ll-date"></div>
+      <div class="form-group"><label>Test Time *</label><input type="time" id="ll-time"></div>
+      <div class="form-group"><label>RTO Office *</label><input type="text" id="ll-rto" placeholder="RTO office name & location"></div>
+      <div class="form-group"><label>Vehicle Type</label>
+        <select id="ll-vtype"><option>2-Wheeler</option><option>4-Wheeler</option><option>Both</option></select>
+      </div>
+      <div class="form-group"><label>Application Number</label><input type="text" id="ll-appno" placeholder="Sarathi application number"></div>
+      <div class="form-group full"><label>Notes</label><textarea id="ll-notes" style="min-height:60px;" placeholder="Any additional notes..."></textarea></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="scheduleLLTest()">📅 Schedule LL Test</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-ll-schedule')">Cancel</button>
+    </div>
+  </div>
+
+    <!-- Bulk Schedule Modal (admin) -->
+    <div class="modal-overlay" id="modal-bulk-schedule" style="display:none;">
+      <div class="modal" style="width:900px;max-width:98vw;">
+        <div class="modal-header">
+          <h3>📅 Schedule Today's Classes</h3>
+          <button class="modal-close" onclick="closeModal('modal-bulk-schedule')">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="color:var(--text2);">Review today's active students and schedule classes. Change time or instructor if needed, then click <strong>Schedule</strong>.</p>
+          <div style="margin:10px 0 14px;display:flex;gap:8px;align-items:center;">
+            <button class="btn btn-accent" onclick="scheduleAllStudentsToday()">Schedule All</button>
+            <button class="btn btn-outline" onclick="renderBulkScheduleList()">Refresh List</button>
+            <div style="margin-left:auto;color:var(--text2);">Total: <span id="bulk-sched-count">0</span></div>
+          </div>
+          <div id="bulk-sched-list" style="max-height:520px;overflow:auto;border:1px solid var(--border);padding:8px;border-radius:6px;background:#fff;"></div>
+        </div>
+        <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;">
+          <button class="btn btn-outline" onclick="closeModal('modal-bulk-schedule')">Close</button>
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- DL Reschedule Modal -->
+<div class="modal-overlay" id="modal-reschedule-test">
+  <div class="modal" style="width:560px;max-width:95vw;">
+    <div class="modal-header"><h3>🔄 Reschedule Test</h3><button class="modal-close" onclick="closeModal('modal-reschedule-test')">✕</button></div>
+    <div style="background:#fee2e2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#b91c1c;">
+      ❌ Mark this test as failed and set a new schedule with reason.
+    </div>
+    <div id="reschedule-original-info" style="background:var(--surface2);border-radius:8px;padding:14px;margin-bottom:16px;font-size:13px;"></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Failure / Reschedule Reason *</label>
+        <select id="reschedule-reason">
+          <option value="">-- Select reason --</option>
+          <option>Student failed test</option>
+          <option>Documents incomplete</option>
+          <option>RTO office closed</option>
+          <option>Vehicle breakdown</option>
+          <option>Student absent</option>
+          <option>Medical emergency</option>
+          <option>Weather conditions</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Comment / Remarks *</label>
+        <textarea id="reschedule-comment" style="min-height:80px;" placeholder="Provide details about why the test is being rescheduled. This will be visible in the student's record..."></textarea>
+      </div>
+      <div class="form-group"><label>New Test Date *</label><input type="date" id="reschedule-newdate"></div>
+      <div class="form-group"><label>New Test Time</label><input type="time" id="reschedule-newtime"></div>
+      <div class="form-group full"><label>New RTO Location</label><input type="text" id="reschedule-newrto" placeholder="RTO office for rescheduled test"></div>
+    </div>
+    <input type="hidden" id="reschedule-test-id">
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-danger" onclick="confirmReschedule()">🔄 Confirm Reschedule</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-reschedule-test')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Vehicle Cash Flow Modal -->
+<div class="modal-overlay" id="modal-vehicle-cashflow">
+  <div class="modal" style="width:600px;max-width:95vw;">
+    <div class="modal-header"><h3>🚗 Vehicle Cash Flow Entry</h3><button class="modal-close" onclick="closeModal('modal-vehicle-cashflow')">✕</button></div>
+    <div class="tabs" style="margin-bottom:18px;">
+      <div class="tab active" onclick="switchVehicleCFTab('fuel',this)">⛽ Fuel</div>
+      <div class="tab" onclick="switchVehicleCFTab('maintenance',this)">🔧 Maintenance</div>
+      <div class="tab" onclick="switchVehicleCFTab('insurance',this)">🛡️ Insurance</div>
+      <div class="tab" onclick="switchVehicleCFTab('other',this)">📋 Other</div>
+    </div>
+    <!-- Fuel Tab -->
+    <div id="vcf-fuel">
+      <div class="form-grid">
+        <div class="form-group"><label>Vehicle *</label>
+          <select id="vcf-fuel-vehicle"><option value="">Select vehicle...</option></select>
+        </div>
+        <div class="form-group"><label>Date *</label><input type="date" id="vcf-fuel-date"></div>
+        <div class="form-group"><label>Litres Filled</label><input type="number" id="vcf-fuel-litres" placeholder="e.g. 20" step="0.5"></div>
+        <div class="form-group"><label>Total Cost (₹) *</label><input type="number" id="vcf-fuel-cost" placeholder="e.g. 2000"></div>
+        <div class="form-group"><label>Odometer (KM)</label><input type="number" id="vcf-fuel-km" placeholder="Current reading"></div>
+        <div class="form-group"><label>Filled By</label><input type="text" id="vcf-fuel-by" placeholder="Instructor / Driver name"></div>
+        <div class="form-group full"><label>Notes</label><input type="text" id="vcf-fuel-notes" placeholder="e.g. Full tank, highway trip"></div>
+      </div>
+    </div>
+    <!-- Maintenance Tab -->
+    <div id="vcf-maintenance" style="display:none;">
+      <div class="form-grid">
+        <div class="form-group"><label>Vehicle *</label>
+          <select id="vcf-maint-vehicle"><option value="">Select vehicle...</option></select>
+        </div>
+        <div class="form-group"><label>Date *</label><input type="date" id="vcf-maint-date"></div>
+        <div class="form-group"><label>Service Type *</label>
+          <select id="vcf-maint-type">
+            <option>Oil Change</option><option>Tyre Replacement</option><option>Brake Service</option>
+            <option>Engine Repair</option><option>Battery Replacement</option><option>General Service</option>
+            <option>Accident Repair</option><option>Other Maintenance</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Cost (₹) *</label><input type="number" id="vcf-maint-cost" placeholder="Service cost"></div>
+        <div class="form-group"><label>Garage / Service Center</label><input type="text" id="vcf-maint-garage" placeholder="Name of garage"></div>
+        <div class="form-group"><label>Next Service Date</label><input type="date" id="vcf-maint-nextdate"></div>
+        <div class="form-group full"><label>Description</label><textarea id="vcf-maint-notes" style="min-height:60px;" placeholder="Details of work done..."></textarea></div>
+      </div>
+    </div>
+    <!-- Insurance Tab -->
+    <div id="vcf-insurance" style="display:none;">
+      <div class="form-grid">
+        <div class="form-group"><label>Vehicle *</label>
+          <select id="vcf-ins-vehicle"><option value="">Select vehicle...</option></select>
+        </div>
+        <div class="form-group"><label>Policy Date *</label><input type="date" id="vcf-ins-date"></div>
+        <div class="form-group"><label>Premium Amount (₹) *</label><input type="number" id="vcf-ins-amount" placeholder="Annual premium"></div>
+        <div class="form-group"><label>Insurance Company</label><input type="text" id="vcf-ins-company" placeholder="Insurance provider"></div>
+        <div class="form-group"><label>Policy Number</label><input type="text" id="vcf-ins-policy" placeholder="Policy/Certificate number"></div>
+        <div class="form-group"><label>Expiry Date</label><input type="date" id="vcf-ins-expiry"></div>
+      </div>
+    </div>
+    <!-- Other Tab -->
+    <div id="vcf-other" style="display:none;">
+      <div class="form-grid">
+        <div class="form-group"><label>Vehicle *</label>
+          <select id="vcf-other-vehicle"><option value="">Select vehicle...</option></select>
+        </div>
+        <div class="form-group"><label>Date *</label><input type="date" id="vcf-other-date"></div>
+        <div class="form-group"><label>Expense Type</label><input type="text" id="vcf-other-type" placeholder="e.g. Parking, Toll, Fine"></div>
+        <div class="form-group"><label>Amount (₹) *</label><input type="number" id="vcf-other-amount" placeholder="Amount"></div>
+        <div class="form-group full"><label>Description</label><textarea id="vcf-other-notes" style="min-height:60px;" placeholder="Details..."></textarea></div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;border-top:1px solid var(--border);padding-top:16px;">
+      <button class="btn btn-accent" onclick="saveVehicleCashflow()" style="flex:1;">💾 Save Entry</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-vehicle-cashflow')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Office Self Attendance Modal -->
+<div class="modal-overlay" id="modal-self-attendance">
+  <div class="modal" style="width:460px;max-width:95vw;">
+    <div class="modal-header"><h3>✅ Mark My Attendance</h3><button class="modal-close" onclick="closeModal('modal-self-attendance')">✕</button></div>
+    <div style="text-align:center;padding:20px 0;">
+      <div id="self-att-clock" style="font-family:'Syne';font-size:36px;font-weight:700;color:var(--primary);margin-bottom:4px;"></div>
+      <div style="font-size:13px;color:var(--text2);" id="self-att-date"></div>
+    </div>
+    <div style="background:linear-gradient(135deg,#eff6ff,#dbeafe);border:1px solid #bfdbfe;border-radius:10px;padding:20px;margin-bottom:18px;text-align:center;">
+      <div style="font-size:32px;margin-bottom:8px;" id="self-att-icon">📍</div>
+      <div style="font-weight:600;color:var(--accent2);" id="self-att-location">Checking location...</div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;" id="self-att-coords"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Attendance Type</label>
+        <select id="self-att-type">
+          <option value="in">Check In</option>
+          <option value="out">Check Out</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Date</label><input type="date" id="self-att-date-input"></div>
+      <div class="form-group full"><label>Notes (optional)</label><input type="text" id="self-att-notes" placeholder="e.g. On-site visit, late due to..."></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-success" onclick="submitSelfAttendance()" style="flex:1;">✅ Submit Attendance</button>
+      <button class="btn btn-outline" onclick="document.getElementById('modal-self-attendance').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-schedule-dl">
+  <div class="modal">
+    <div class="modal-header"><h3>Schedule DL Test</h3><button class="modal-close" onclick="closeModal('modal-schedule-dl')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Student</label>
+        <select id="dl-student" style="width:100%">
+          <option value="">Select Student</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Test Date</label><input type="date" id="dl-date"></div>
+      <div class="form-group full"><label>RTO Location</label><input type="text" id="dl-rto" placeholder="RTO office address"></div>
+      <div class="form-group"><label>Test Time</label><input type="time" id="dl-time"></div>
+      <div class="form-group"><label>Vehicle Type</label>
+        <select id="dl-vtype"><option>2-Wheeler</option><option>4-Wheeler</option><option>Both</option></select>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="scheduleDLTest()">Schedule & Notify</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-schedule-dl')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-fuel">
+  <div class="modal" style="width:580px;">
+    <div class="modal-header"><h3>⛽ Log Fuel Fill</h3><button class="modal-close" onclick="closeModal('modal-add-fuel')">✕</button></div>
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px;margin-bottom:18px;font-size:13px;color:#1d4ed8;">
+      ℹ️ This fuel log will be saved and <strong>visible to the school owner</strong> for tracking purposes.
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date *</label><input type="date" id="fuel-date"></div>
+      <div class="form-group"><label>Vehicle *</label>
+        <select id="fuel-vehicle">
+          <option value="">Select your vehicle...</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Litres Filled *</label><input type="number" id="fuel-litres" placeholder="e.g. 20" step="0.5" min="0"></div>
+      <div class="form-group"><label>Total Cost (₹) *</label><input type="number" id="fuel-cost" placeholder="e.g. 2000" min="0"></div>
+      <div class="form-group"><label>Odometer / KM Reading</label><input type="number" id="fuel-km" placeholder="Current odometer reading"></div>
+      <div class="form-group"><label>Price per Litre (₹)</label><input type="number" id="fuel-ppl" placeholder="Auto calculated" readonly style="background:#f8fafc;"></div>
+      <div class="form-group full"><label>Notes (optional)</label><input type="text" id="fuel-notes" placeholder="e.g. Full tank, highway trip, etc."></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="addDriverFuelEntry()">💾 Submit Fuel Log</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-fuel')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-class">
+  <div class="modal">
+    <div class="modal-header"><h3>Add Class Slot</h3><button class="modal-close" onclick="closeModal('modal-add-class')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Day</label>
+        <select id="cls-day"><option>Monday</option><option>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option><option>Saturday</option><option>Sunday</option></select>
+      </div>
+      <div class="form-group"><label>Time</label><input type="time" id="cls-time"></div>
+      <div class="form-group full"><label>Student Name</label>
+        <input type="text" id="cls-student" placeholder="Student name">
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="addClassSlot()">Add Slot</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-class')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-admin">
+  <div class="modal" style="max-width: 600px;">
+    <div class="modal-header"><h3>Add School Administrator</h3><button class="modal-close" onclick="closeModal('modal-add-admin')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Select School</label>
+        <select id="admin-school" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans'; font-size: 14px;">
+          <option value="">Choose a school...</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Admin Name</label>
+        <input type="text" id="admin-name" placeholder="Full name of administrator">
+      </div>
+      <div class="form-group full"><label>Email Address</label>
+        <input type="email" id="admin-email" placeholder="admin@school.com">
+      </div>
+      <div class="form-group"><label>Password</label>
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="password" id="admin-password" placeholder="Set initial password" style="padding-right: 40px; width: 100%;">
+          <button type="button" onclick="togglePasswordVisibility('admin-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+            <span id="admin-password-icon">👁</span>
+          </button>
+        </div>
+      </div>
+      <div class="form-group"><label>Confirm Password</label>
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="password" id="admin-confirm-password" placeholder="Confirm password" style="padding-right: 40px; width: 100%;">
+          <button type="button" onclick="togglePasswordVisibility('admin-confirm-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+            <span id="admin-confirm-password-icon">👁</span>
+          </button>
+        </div>
+      </div>
+      <div class="form-group"><label>Role</label>
+        <select id="admin-role">
+          <option value="office">Office Admin</option>
+          <option value="instructor">Instructor</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Phone Number</label>
+        <input type="tel" id="admin-phone" placeholder="Phone number">
+      </div>
+      <div class="form-group full"><label>Permissions</label>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <input type="checkbox" id="perm-students" checked style="margin: 0;">
+            <div>
+              <div style="font-weight: 600; color: #374151; font-size: 13px;">👥 Students</div>
+              <div style="font-size: 11px; color: #6b7280;">Add, edit, delete students</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <input type="checkbox" id="perm-transactions" checked style="margin: 0;">
+            <div>
+              <div style="font-weight: 600; color: #374151; font-size: 13px;">💰 Transactions</div>
+              <div style="font-size: 11px; color: #6b7280;">Manage income & expenses</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <input type="checkbox" id="perm-attendance" checked style="margin: 0;">
+            <div>
+              <div style="font-weight: 600; color: #374151; font-size: 13px;">✅ Attendance</div>
+              <div style="font-size: 11px; color: #6b7280;">Mark student attendance</div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; padding: 8px; background: white; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <input type="checkbox" id="perm-reports" checked style="margin: 0;">
+            <div>
+              <div style="font-weight: 600; color: #374151; font-size: 13px;">📊 Reports</div>
+              <div style="font-size: 11px; color: #6b7280;">View reports & analytics</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" data-action="add_admin" onclick="addAdminFromModal()">Add Administrator</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-admin')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- STAFF MODAL -->
+<div class="modal-overlay" id="modal-add-staff">
+  <div class="modal" style="max-width: 600px;">
+    <div class="modal-header"><h3>Add Staff Member</h3><button class="modal-close" onclick="closeModal('modal-add-staff')">✕</button></div>
+    <div class="form-grid">
+      <div class="form-group full"><label>Select School</label>
+        <select id="staff-school" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans'; font-size: 14px;">
+          <option value="">Choose a school...</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Staff Name</label>
+        <input type="text" id="staff-name" placeholder="Full name of staff member">
+      </div>
+      <div class="form-group"><label>Email Address</label>
+        <input type="email" id="staff-email" placeholder="staff@school.com">
+      </div>
+      <div class="form-group"><label>Password</label>
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="password" id="staff-password" placeholder="Set initial password" style="padding-right: 40px; width: 100%;">
+          <button type="button" onclick="togglePasswordVisibility('staff-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+            <span id="staff-password-icon">👁</span>
+          </button>
+        </div>
+      </div>
+      <div class="form-group"><label>Confirm Password</label>
+        <div style="position: relative; display: flex; align-items: center;">
+          <input type="password" id="staff-confirm-password" placeholder="Confirm password" style="padding-right: 40px; width: 100%;">
+          <button type="button" onclick="togglePasswordVisibility('staff-confirm-password')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text2); padding: 4px; border-radius: 4px; font-size: 14px;">
+            <span id="staff-confirm-password-icon">👁</span>
+          </button>
+        </div>
+      </div>
+      <div class="form-group"><label>Phone Number</label>
+        <input type="tel" id="staff-phone" placeholder="Phone number">
+      </div>
+      <div class="form-group"><label>Role</label>
+        <select id="staff-role">
+          <option value="instructor">Instructor</option>
+          <option value="office">Office Staff</option>
+          <option value="admin">Administrator</option>
+          <option value="support">Support Staff</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Department</label>
+        <select id="staff-department">
+          <option value="training">Training</option>
+          <option value="administration">Administration</option>
+          <option value="operations">Operations</option>
+          <option value="support">Support</option>
+          <option value="maintenance">Maintenance</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Employee ID</label>
+        <input type="text" id="staff-employee-id" placeholder="Employee ID">
+      </div>
+      <div class="form-group"><label>Joining Date</label>
+        <input type="date" id="staff-joining-date">
+      </div>
+      <div class="form-group full"><label>Address</label>
+        <textarea id="staff-address" placeholder="Staff address" rows="2" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans'; font-size: 14px; resize: vertical;"></textarea>
+      </div>
+      <div class="form-group"><label>Salary (₹)</label>
+        <input type="number" id="staff-salary" placeholder="Monthly salary">
+      </div>
+      <div class="form-group"><label>Work Type</label>
+        <select id="staff-work-type">
+          <option value="full-time">Full Time</option>
+          <option value="part-time">Part Time</option>
+          <option value="contract">Contract</option>
+          <option value="intern">Intern</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Notes</label>
+        <textarea id="staff-notes" placeholder="Additional notes about staff member" rows="2" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-family: 'DM Sans'; font-size: 14px; resize: vertical;"></textarea>
+      </div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" data-action="add_staff" onclick="addStaffFromModal()">Add Staff</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-staff')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script src="instructor.js"></script>
+<script src="owner.js"></script>
+<script src="admin.js"></script>
+
+<!-- ADD VEHICLE MODAL -->
+<div class="modal-overlay" id="modal-add-vehicle">
+  <div class="modal" style="width:600px;max-width:96vw;">
+    <div class="modal-header">
+      <h3>🚗 Add Vehicle</h3>
+      <button class="modal-close" onclick="closeModal('modal-add-vehicle')">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Vehicle Name *</label><input type="text" id="veh-name" placeholder="e.g. Maruti Swift"></div>
+      <div class="form-group"><label>Registration Number *</label><input type="text" id="veh-reg" placeholder="e.g. KA01AB1234"></div>
+      <div class="form-group"><label>Vehicle Type *</label>
+        <select id="veh-type">
+          <option value="2-Wheeler">2-Wheeler</option>
+          <option value="4-Wheeler (LMV)" selected>4-Wheeler (LMV)</option>
+          <option value="Heavy Vehicle">Heavy Vehicle</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Status</label>
+        <select id="veh-status">
+          <option value="active">Active</option>
+          <option value="maintenance">Maintenance</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Assign to School</label>
+        <select id="veh-school"><option value="">-- Select School --</option></select>
+      </div>
+      <div class="form-group"><label>Assign Instructor</label>
+        <select id="veh-instructor"><option value="">-- Select Instructor --</option></select>
+      </div>
+      <div class="form-group"><label>Fuel Level (%)</label>
+        <input type="number" id="veh-fuel" placeholder="e.g. 80" min="0" max="100" value="80">
+      </div>
+      <div class="form-group"><label>Last Maintenance Date</label>
+        <input type="date" id="veh-maintenance">
+      </div>
+      <div class="form-group"><label>Chassis Number</label><input type="text" id="veh-chassis" placeholder="Optional"></div>
+      <div class="form-group"><label>Engine Number</label><input type="text" id="veh-engine" placeholder="Optional"></div>
+      <div class="form-group"><label>Insurance Expiry</label><input type="date" id="veh-insurance-expiry"></div>
+      <div class="form-group"><label>FC Expiry</label><input type="date" id="veh-fc-expiry"></div>
+    </div>
+    <div style="margin-top:20px;display:flex;gap:10px;">
+      <button class="btn btn-accent" onclick="saveNewVehicle()" style="flex:1;">✓ Add Vehicle</button>
+      <button class="btn btn-outline" onclick="closeModal('modal-add-vehicle')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
